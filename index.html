@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queens Copy Timert</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        #controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #0a66c2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #timer {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+
+        #game-container {
+            position: relative;
+            width: 350px;
+            height: 350px;
+            border: 4px solid black;
+            box-sizing: content-box; /* Ensure border doesn't affect inner width */
+        }
+
+        #grid-cover {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #333;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            z-index: 10;
+        }
+
+        #queens-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 50px);
+            grid-template-rows: repeat(7, 50px);
+            width: 100%;
+            height: 100%;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            border-right: 1px solid rgba(0,0,0,0.2);
+            border-bottom: 1px solid rgba(0,0,0,0.2);
+        }
+
+        /* Define the region colors */
+        .color-purple { background-color: #b39ddb; }
+        .color-orange { background-color: #ffcc80; }
+        .color-blue { background-color: #90caf9; }
+        .color-green { background-color: #a5d6a7; }
+        .color-grey { background-color: #e0e0e0; }
+        .color-red { background-color: #ef9a9a; }
+        .color-yellow { background-color: #fff59d; }
+
+        /* Thick borders for region boundaries */
+        .thick-border-right { border-right: 4px solid black; }
+        .thick-border-bottom { border-bottom: 4px solid black; }
+
+        .queen-icon {
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s ease-in-out;
+        }
+        
+        .queen-icon.found {
+            color: #0a66c2; /* Change color when found */
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Queens Reaction Test</h1>
+    <div id="controls">
+        <p>Double-click all 7 queens as fast as you can!</p>
+        <button id="start-btn">Start Game</button>
+        <div id="timer">Time: 0.000 ms</div>
+    </div>
+
+    <div id="game-container">
+        <div id="grid-cover">Click Start to Begin</div>
+        <div id="queens-grid"></div>
+    </div>
+
+    <script>
+        const gridColors = [
+            ['purple', 'orange', 'orange', 'blue', 'blue', 'blue', 'blue'],
+            ['purple', 'purple', 'orange', 'green', 'green', 'blue', 'blue'],
+            ['purple', 'orange', 'orange', 'green', 'grey', 'grey', 'blue'],
+            ['purple', 'purple', 'orange', 'green', 'grey', 'blue', 'blue'],
+            ['purple', 'orange', 'orange', 'green', 'grey', 'grey', 'blue'],
+            ['red', 'green', 'green', 'green', 'grey', 'grey', 'blue'],
+            ['red', 'red', 'yellow', 'yellow', 'grey', 'grey', 'blue']
+        ];
+
+        // Coordinates of the queens (row, column) zero-indexed
+        const queenPositions = [
+            [0, 2], [1, 4], [2, 6],
+            [3, 1], [4, 5], [5, 0],
+            [6, 3]
+        ];
+
+        let startTime;
+        let queensFound = 0;
+        const totalQueens = queenPositions.length;
+        const timerDisplay = document.getElementById('timer');
+        const startBtn = document.getElementById('start-btn');
+        const gridCover = document.getElementById('grid-cover');
+        const gridContainer = document.getElementById('queens-grid');
+
+        function createGrid() {
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 7; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.classList.add(`color-${gridColors[r][c]}`);
+
+                    // Add thick borders for region boundaries
+                    if (c < 6 && gridColors[r][c] !== gridColors[r][c+1]) {
+                        cell.classList.add('thick-border-right');
+                    }
+                    if (r < 6 && gridColors[r][c] !== gridColors[r+1][c]) {
+                        cell.classList.add('thick-border-bottom');
+                    }
+
+                    // Check if a queen should be placed here
+                    if (queenPositions.some(pos => pos[0] === r && pos[1] === c)) {
+                        const queen = document.createElement('span');
+                        queen.classList.add('queen-icon');
+                        queen.innerHTML = '♛'; // Unicode crown
+                        
+                        // Add the double-click listener specifically to the queen icon
+                        queen.addEventListener('dblclick', function(e) {
+                            e.stopPropagation(); // Prevent bubbling
+                            if (!this.classList.contains('found')) {
+                                this.classList.add('found');
+                                queensFound++;
+                                checkWinCondition();
+                            }
+                        });
+                        cell.appendChild(queen);
+                    } else {
+                        // Add an 'x' for non-queen cells (optional, based on image)
+                        cell.innerHTML = '<span style="color: #555;">×</span>';
+                    }
+
+                    gridContainer.appendChild(cell);
+                }
+            }
+        }
+
+        function startGame() {
+            startBtn.disabled = true;
+            gridCover.style.display = 'none';
+            queensFound = 0;
+            // Reset any previously found queens
+            document.querySelectorAll('.queen-icon').forEach(q => q.classList.remove('found'));
+            
+            // Start the high-resolution timer
+            startTime = performance.now();
+        }
+
+        function checkWinCondition() {
+            if (queensFound === totalQueens) {
+                const endTime = performance.now();
+                const totalTime = (endTime - startTime).toFixed(3);
+                timerDisplay.textContent = `Time: ${totalTime} ms`;
+                startBtn.disabled = false;
+                gridCover.textContent = `Done! Time: ${totalTime} ms. Click Start to try again.`;
+                gridCover.style.display = 'flex';
+            }
+        }
+
+        // Initialize the grid on load
+        createGrid();
+
+        // Attach event listener to the start button
+        startBtn.addEventListener('click', startGame);
+
+    </script>
+</body>
+</html>
