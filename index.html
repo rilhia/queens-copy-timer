@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Queens: Mechanical Speed Analytics</title>
+    <title>Queens Speed Audit</title>
     <style>
         body {
             font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -13,8 +13,11 @@
             background-color: #f3f2ef;
             color: #1d1148;
             margin: 0;
-            touch-action: none;
+            /* Changed from none to auto to allow page scrolling */
+            touch-action: auto; 
             user-select: none;
+            /* Added padding to ensure space at the bottom when scrolling */
+            padding-bottom: 40px; 
         }
 
         h1 { margin: 20px 0 5px 0; font-size: 1.5rem; }
@@ -37,6 +40,8 @@
             border: 4px solid #000;
             background: #fff;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            /* Move touch-action: none here so the game remains precise but the page can scroll */
+            touch-action: none; 
         }
 
         #grid-cover {
